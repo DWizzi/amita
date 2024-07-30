@@ -3,9 +3,14 @@ use linfa_linalg::qr::QR;
 use ndarray::{Array2, ArrayBase, Dim, Ix1, Ix2, OwnedRepr, ViewRepr};
 use statrs::distribution::{ContinuousCDF, StudentsT};
 
-
 pub type ArrayFloat64Dim1 = ArrayBase<OwnedRepr<f64>, Ix1>;
 pub type ArrayFloat64Dim2 = ArrayBase<OwnedRepr<f64>, Ix2>;
+
+#[derive(Debug, Clone)]
+pub enum SEType {
+    NonRobust,
+    Robust,
+}
 
 pub trait Results {
     fn coef(&self) -> Result<ArrayFloat64Dim2, AmitaError>;
@@ -24,6 +29,7 @@ pub trait Results {
 pub struct OLSResults {
     n_obs: usize,
     n_regressors: usize,
+    se_type: SEType,
 
     // estimates
     coef: Option<ArrayFloat64Dim2>, // beta
@@ -118,6 +124,7 @@ impl OLSSolver {
         let results = OLSResults {
             n_obs,
             n_regressors,
+            se_type: SEType::NonRobust,
 
             coef: None,
             se: None,
@@ -131,6 +138,16 @@ impl OLSSolver {
         };
 
         Ok( OLSSolver { y, x, q, r, results } )
+    }
+
+    pub fn with_robust_se(mut self) -> Self {
+        self.results.se_type = SEType::Robust;
+        self
+    }
+
+    pub fn with_nonrobust_se(mut self) -> Self {
+        self.results.se_type = SEType::NonRobust;
+        self
     }
 
     fn validate_data(
@@ -178,9 +195,18 @@ impl OLSSolver {
     }
 
     fn solve_se(self) -> Result<Self, AmitaError> {
-        self
-        .solve_robust_se()?
-        .solve_t_pvals()
+        match self.results.se_type {
+            SEType::NonRobust => {
+                self
+                .solve_non_robust_se()?
+                .solve_t_pvals()
+            },
+            SEType::Robust => {
+                self
+                .solve_robust_se()?
+                .solve_t_pvals()
+            }
+        }
     }
 
     fn solve_non_robust_se(mut self) -> Result<Self, AmitaError> {
