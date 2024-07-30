@@ -1,0 +1,13 @@
+[package]
+name = "amita-discrete"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description.workspace = true
+
+[dependencies]
+amita-error = { workspace = true }
+ndarray = { workspace = true }
+linfa-linalg = { workspace = true }
+polars = { workspace = true }
+statrs = { workspace = true }
