@@ -92,8 +92,8 @@ impl Solver<OLSResults> for OLSSolver {
     fn solve(self) -> Result<Self, AmitaError> {
         self
         .solve_coef()?
-        .solve_se()
-        // .solve_r_sq()
+        .solve_se()?
+        .solve_r_sq()
     }
 }
 
@@ -230,7 +230,7 @@ impl OLSSolver {
         let y = self.y.clone();
         let y_mean = y.mean().unwrap();
 
-        let df_rss = (self.results.n_regressors - self.results.n_obs - 1) as f64;
+        let df_rss = (self.results.n_obs - self.results.n_regressors - 1) as f64;
         let df_tss = (self.results.n_obs - 1) as f64;
 
         let rss = resid.map(|x| x.powi(2)).sum();
