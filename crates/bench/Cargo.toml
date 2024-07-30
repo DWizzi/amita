@@ -1,0 +1,9 @@
+[package]
+name = "bench"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+polars = { workspace = true }
+amita-error = { path = "../amita-error" }
+amita-linear = { path = "../amita-linear" }
