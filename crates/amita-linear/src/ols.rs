@@ -12,9 +12,9 @@ pub trait Results {
 
     fn se(&self) -> Result<ArrayFloat64Dim1, AmitaError>;
 
-    fn t(&self) -> Result<ArrayFloat64Dim2, AmitaError>;
+    fn t(&self) -> Result<ArrayFloat64Dim1, AmitaError>;
 
-    // fn p_vals(&self) -> Result<ArrayFloat64Dim2, AmitaError>;
+    fn p_vals(&self) -> Result<ArrayFloat64Dim1, AmitaError>;
 
     fn summary(&self) -> Result<String, AmitaError>;
 }
@@ -30,8 +30,8 @@ pub struct OLSResults {
     se: Option<ArrayFloat64Dim1>, // standard error of beta
     y_pred: Option<ArrayFloat64Dim2>, // predicted y, or fitted y
     resid: Option<ArrayFloat64Dim2>, // residuals, or the error term
-    t: Option<ArrayFloat64Dim2>, // t statistics
-    // p_vals: Option<ArrayFloat64Dim2>, // p values of H_0: \beta = 0
+    t: Option<ArrayFloat64Dim1>, // t statistics
+    p_vals: Option<ArrayFloat64Dim1>, // p values of H_0: \beta = 0
 
     // goodness of fit
     r_sq: Option<f64>,
@@ -50,13 +50,13 @@ impl Results for OLSResults {
         self.se.clone().ok_or(AmitaError::NotSolved)
     }
 
-    fn t(&self) -> Result<ArrayFloat64Dim2, AmitaError> {
+    fn t(&self) -> Result<ArrayFloat64Dim1, AmitaError> {
         self.t.clone().ok_or(AmitaError::NotSolved)
     }
 
-    // fn p_vals(&self) -> Result<ArrayFloat64Dim2, AmitaError> {
-    //     self.p_vals.clone().ok_or(AmitaError::NotSolved)
-    // }
+    fn p_vals(&self) -> Result<ArrayFloat64Dim1, AmitaError> {
+        self.p_vals.clone().ok_or(AmitaError::NotSolved)
+    }
     
     fn summary(&self) -> Result<String, AmitaError> {
         todo!()
@@ -124,7 +124,7 @@ impl OLSSolver {
             y_pred: None,
             resid: None,
             t: None,
-            // p_vals: None,
+            p_vals: None,
 
             r_sq: None,
             r_sq_adj: None,
@@ -151,7 +151,7 @@ impl OLSSolver {
 
 // Estimate coefficients
 impl OLSSolver {
-    /// Estimate OLS' coefficients using QR-decomposed X
+    /// Estimate OLS' coefficients using QR-decomposed X:
     /// \beta = R^{-1} Q^{\transpose} y
     fn solve_coef(mut self) -> Result<Self, AmitaError> {
         let y = self.y.clone();
@@ -179,8 +179,8 @@ impl OLSSolver {
 
     fn solve_se(self) -> Result<Self, AmitaError> {
         self
-        .solve_non_robust_se()
-        // .solve_t_p()
+        .solve_non_robust_se()?
+        .solve_t_pvals()
     }
 
     fn solve_non_robust_se(mut self) -> Result<Self, AmitaError> {
@@ -205,22 +205,21 @@ impl OLSSolver {
         Ok(self)
     }
 
-    // fn solve_t_p(mut self) -> Result<Self, AmitaError> {
-    //     // let df = (self.results.n_obs - self.results.n_regressors - 1) as f64;
-    //     // let coef = self.results.coef.clone().ok_or(AmitaError::NotSolved)?;
-    //     // let se = self.results.se.clone().ok_or(AmitaError::NotSolved)?;
+    fn solve_t_pvals(mut self) -> Result<Self, AmitaError> {
+        let df = (self.results.n_obs - self.results.n_regressors - 1) as f64;
+        let coef = self.results.coef.clone().ok_or(AmitaError::NotSolved)?.into_shape((self.results.n_regressors,)).unwrap().into_dimensionality::<Ix1>().unwrap();
+        let se = self.results.se.clone().ok_or(AmitaError::NotSolved)?;
 
-    //     // let t = coef / se.view();
+        let t = coef / se.view();
 
-    //     // let t_dist = StudentsT::new(0., 1., df).unwrap();
-    //     // let p_vals = t.map(|x| t_dist.cdf(x / 2 as f64));
+        let t_dist = StudentsT::new(0., 1., df).unwrap();
+        let p_vals = t.map(|x| 2. * ( 1. - t_dist.cdf(x.abs()) ) );
 
-    //     // self.results.t = Some(t);
-    //     // self.results.p_vals = Some(p_vals);
+        self.results.t = Some(t);
+        self.results.p_vals = Some(p_vals);
 
-    //     // Ok(self)
-    //     todo!()
-    // }
+        Ok(self)
+    }
 }
 
 // Goodness of fit
@@ -256,7 +255,7 @@ mod tests {
     #[test]
     fn test_dimension() {
         let mut arr = array![[1., 2., 3.], [4., 5., 6.,]];
-        let res = arr.view_mut().into_shape((6,1)).unwrap().into_dimensionality::<Ix1>();
+        let res = arr.view_mut().into_shape((6,)).unwrap().into_dimensionality::<Ix1>();
         println!("{:#?}", res);
     }
 }
