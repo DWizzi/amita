@@ -1,6 +1,6 @@
 use amita_error::AmitaError;
 use linfa_linalg::qr::QR;
-use ndarray::{ArrayBase, Dim, Ix1, Ix2, OwnedRepr, ViewRepr};
+use ndarray::{Array2, ArrayBase, Dim, Ix1, Ix2, OwnedRepr, ViewRepr};
 use statrs::distribution::{ContinuousCDF, StudentsT};
 
 
@@ -179,7 +179,7 @@ impl OLSSolver {
 
     fn solve_se(self) -> Result<Self, AmitaError> {
         self
-        .solve_non_robust_se()?
+        .solve_robust_se()?
         .solve_t_pvals()
     }
 
@@ -202,6 +202,37 @@ impl OLSSolver {
 
         self.results.se = Some(se);
 
+        Ok(self)
+    }
+
+    /// HC1 Robust Standard Error
+    fn solve_robust_se(mut self) -> Result<Self, AmitaError> {
+        let n_obs = self.results.n_obs as f64;
+        let n_regressors = self.results.n_regressors as f64;
+
+        let x = self.x.clone();
+        let r = self.r.clone();
+        let resid = self.results.clone().resid.ok_or(AmitaError::NotSolved)?;
+
+        // X^{\transpose} X. Utilizing QR decomposition for calculation
+        let x_gramian_inverse = r.t().dot(&r)
+            .qr().map_err(|_| AmitaError::NotQRDecomposable { 
+                matrix_name: "R^{\transpose}R matrix from QR-decomposed X".to_string() 
+            })?
+            .inverse().map_err(|_| AmitaError::NotInversable {
+                matrix_name: "R^{\transpose}R matrix from QR-decomposed X".to_string() 
+            })?;
+        println!("{:#?}", x_gramian_inverse.shape());
+
+        // diag(e^{\transpose}e)
+        let resid_gramian_diag = Array2::from_diag(&resid.dot(&resid.t()).diag());
+        println!("{:#?}", resid_gramian_diag.shape());
+
+        let variance = x_gramian_inverse.dot(&x.t()).dot(&resid_gramian_diag).dot(&x).dot(&x_gramian_inverse);
+        let se = variance.diag().map(|x| (x * n_obs / (n_obs - n_regressors - 1.)).sqrt() );
+
+        self.results.se = Some(se);
+        
         Ok(self)
     }
 
