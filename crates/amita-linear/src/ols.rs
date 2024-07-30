@@ -103,7 +103,7 @@ impl OLSSolver {
         y: ArrayBase<ViewRepr<&f64>, Dim<[usize; 2]>>,
         x: ArrayBase<ViewRepr<&f64>, Dim<[usize; 2]>>,
     ) -> Result<Self, AmitaError> {
-        let _res = OLSSolver::validate_x_y(y, x)?;
+        let _res = OLSSolver::validate_data(y, x)?;
 
         let y = y.to_owned();
         let x = x.to_owned();
@@ -133,7 +133,7 @@ impl OLSSolver {
         Ok( OLSSolver { y, x, q, r, results } )
     }
 
-    fn validate_x_y(
+    fn validate_data(
         y: ArrayBase<ViewRepr<&f64>, Dim<[usize; 2]>>,
         x: ArrayBase<ViewRepr<&f64>, Dim<[usize; 2]>>,
     ) -> Result<(), AmitaError> {
