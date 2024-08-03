@@ -12,10 +12,13 @@ description = "Rust crate for econometricians"
 
 [workspace.dependencies]
 linfa-linalg = "0.1.0"
-ndarray = "0.15.6"
+ndarray = { version = "0.15.6", features = ["serde"] }
 polars = { version = "0.41.3", features = ["lazy", "ndarray"] }
 thiserror = "1.0.63"
 statrs = "0.17.1"
+argmin = { version = "0.10.0" }
+argmin-math = { version = "0.4.0", features = ["ndarray_latest-nolinalg"] }
+
 
 amita-error = { path = "crates/amita-error"}
 amita-linear = { path = "crates/amita-linear"}
