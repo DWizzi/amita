@@ -7,3 +7,4 @@ edition.workspace = true
 polars = { workspace = true }
 amita-error = { path = "../amita-error" }
 amita-linear = { path = "../amita-linear" }
+amita-traits = { path = "../amita-traits" }

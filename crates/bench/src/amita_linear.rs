@@ -2,7 +2,8 @@
 #[cfg(test)]
 mod tests {
     use amita_error::AmitaError;
-    use amita_linear::ols::{OLSSolver, Results, Solver};
+    use amita_linear::ols::OLSSolver;
+    use amita_traits::{Solver, SolverResults};
     use polars::prelude::*;
 
     use crate::load_iris_dataset;
@@ -14,6 +15,8 @@ mod tests {
             .select(["petal.length"])
             .unwrap()
             .to_ndarray::<Float64Type>(IndexOrder::C)
+            .unwrap()
+            .into_shape((df.height(),))
             .unwrap();
 
         let mut c = vec![];
@@ -32,7 +35,7 @@ mod tests {
             .to_ndarray::<Float64Type>(IndexOrder::C)
             .unwrap();
 
-        let solver = OLSSolver::new(y.view(), x.view())?;
+        let solver = OLSSolver::new(&y, &x)?;
         let results = solver.solve()?.results();
 
         println!("{:#?}", results.se());
