@@ -22,3 +22,4 @@ argmin-math = { version = "0.4.0", features = ["ndarray_latest-nolinalg"] }
 
 amita-error = { path = "crates/amita-error"}
 amita-linear = { path = "crates/amita-linear"}
+amita-universal ={ path = "crates/amita-universal" }
