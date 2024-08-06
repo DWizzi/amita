@@ -1,5 +1,5 @@
 use amita_error::AmitaError;
-use amita_traits::{Solver, SolverResults};
+use amita_universal::traits::{Solver, SolverResults};
 use linfa_linalg::qr::QR;
 use ndarray::{Array1, Array2, Ix1};
 use statrs::distribution::{ContinuousCDF, StudentsT};

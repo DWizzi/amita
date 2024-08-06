@@ -8,5 +8,5 @@ ndarray = { workspace = true }
 linfa-linalg = { workspace = true }
 statrs = { workspace = true }
 
-amita-error = { path = "../amita-error" }
-amita-traits ={ path = "../amita-traits" }
+amita-error = { workspace = true }
+amita-universal ={ workspace = true }
