@@ -3,14 +3,14 @@
 mod tests {
     use amita_error::AmitaError;
     use amita_linear::ols::OLSSolver;
-    use amita_traits::{Solver, SolverResults};
+    use amita_universal::traits::{Solver, SolverResults};
     use polars::prelude::*;
 
-    use crate::load_iris_dataset;
+    use crate::datasets;
 
     #[test]
     fn test_solver_coef() -> Result<(), AmitaError> {
-        let df = load_iris_dataset();
+        let df = datasets::iris();
         let y = df
             .select(["petal.length"])
             .unwrap()
