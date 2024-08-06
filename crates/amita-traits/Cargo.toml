@@ -1,0 +1,11 @@
+[package]
+name = "amita-traits"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description.workspace = true
+
+[dependencies]
+ndarray = { workspace = true }
+
+amita-error = { path = "../amita-error" }
