@@ -6,10 +6,11 @@ authors.workspace = true
 description.workspace = true
 
 [dependencies]
-amita-error = { workspace = true }
 ndarray = { workspace = true }
 linfa-linalg = { workspace = true }
-polars = { workspace = true }
 statrs = { workspace = true }
 argmin = { workspace = true }
 argmin-math = { workspace = true }
+
+amita-error = { workspace = true }
+amita-universal ={ workspace = true }
