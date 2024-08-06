@@ -1,5 +1,5 @@
 [package]
-name = "amita-traits"
+name = "amita-universal"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
