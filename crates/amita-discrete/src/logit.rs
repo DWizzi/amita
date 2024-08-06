@@ -1,49 +1,140 @@
-use std::f64::consts::E;
+use std::collections::HashSet;
 
 use amita_error::AmitaError;
-use ndarray::{Axis};
-use ndarray::prelude::*;
+use amita_universal::math::sigmoid;
+use amita_universal::traits::Solver;
+use amita_universal::traits::SolverResults;
+use ndarray::Axis;
 
-use argmin::core::{CostFunction, Error, Executor, Gradient, Hessian, Operator, State};
+use argmin::core::{CostFunction, Error, Executor, Gradient, Operator};
 use argmin::solver::gradientdescent::SteepestDescent;
 use argmin::solver::linesearch::MoreThuenteLineSearch;
 
 use ndarray::{Array1, Array2};
 
-struct Logit {
-    y: Array2<f64>,
-    x: Array2<f64>,
-
+#[derive(Debug, Clone)]
+struct LogitResults {
     n_obs: usize,
     n_regressors: usize,
-} 
+}
 
-impl Logit {
-    pub fn new(
-        y: Array2<f64>,
-        x: Array2<f64>,
-    ) -> Result<Self, AmitaError> {
-        let n_obs = x.shape()[0] as usize;
-        let n_regressors = x.shape()[1] as usize;
-
-        Ok( Self {
-            y, x, n_obs, n_regressors,
-        } )
+impl SolverResults for LogitResults {
+    fn coef(&self) -> Result<Array1<f64>, AmitaError> {
+        todo!()
     }
 
-    fn sigmoid(x: f64) -> f64 {
-        1. / (1. + E.powf(-x))
+    fn se(&self) -> Result<Array1<f64>, AmitaError> {
+        todo!()
+    }
+
+    fn t(&self) -> Result<Array1<f64>, AmitaError> {
+        todo!()
+    }
+
+    fn p_vals(&self) -> Result<Array1<f64>, AmitaError> {
+        todo!()
+    }
+
+    fn summary(&self) -> Result<String, AmitaError> {
+        todo!()
     }
 }
 
-impl CostFunction for Logit {
+#[derive(Debug, Clone)]
+struct LogitSolver {
+    y: Array1<f64>,
+    x: Array2<f64>,
+
+    results: LogitResults,
+}
+
+impl LogitSolver {
+    pub fn new(
+        y: &Array1<i32>,
+        x: &Array2<f64>,
+    ) -> Result<Self, AmitaError> {
+        let _res = LogitSolver::validate_data(y, x)?;
+
+        let n_obs = x.shape()[0];
+        let n_regressors = x.shape()[1];
+
+        let results = LogitResults {
+            n_obs,
+            n_regressors,
+        };
+
+        let y = y.clone().map(|x| *x as f64);
+
+        Ok( Self {
+            y: y,
+            x: x.clone(),
+            results: results,
+        })
+    }
+
+    fn validate_data(
+        y: &Array1<i32>,
+        x: &Array2<f64>,
+    ) -> Result<(), AmitaError> {
+        if x.shape()[0] != y.shape()[0] {
+            return Err(AmitaError::NotSameObservations);
+        }
+
+        let mut y_allowed = HashSet::new();
+        y_allowed.insert(0 as i32);
+        y_allowed.insert(1 as i32);
+
+        let y_unique = y.into_iter()
+            .map(|x| *x)
+            .collect::<HashSet<i32>>();
+
+        if y_unique != y_allowed {
+            return Err(AmitaError::NotSolved); // TODO: new error definition needed here
+        }
+
+        Ok(())
+    }
+}
+
+impl Solver<LogitResults> for LogitSolver {
+    fn results(&self) -> LogitResults {
+        todo!()
+    }
+
+    fn solve(self) -> Result<Self, AmitaError> {
+        todo!()
+    }
+}
+
+impl LogitSolver {
+    fn solve_coef(mut self) -> Result<Self, AmitaError> {
+        let init_param = Array1::zeros((self.results.n_obs, ));
+
+        let linesearch = MoreThuenteLineSearch::new();
+        let solver = SteepestDescent::new(linesearch);
+
+        let res = Executor::new(self, solver)
+            .configure(|state| 
+                state
+                    .param(init_param)
+                    .max_iters(100)
+                    // .target_cost(-1000.)
+            )
+            .run()
+            .unwrap();
+
+        todo!()
+    }
+}
+
+impl CostFunction for LogitSolver {
     type Param = Array1<f64>;
     type Output = f64;
 
     fn cost(&self, param: &Self::Param) -> Result<Self::Output, argmin::core::Error> {
         let p = self.x.map_axis(Axis(1), |row| {
-            Self::sigmoid(row.dot(param))
-        }).into_shape((self.n_obs, 1)).unwrap();
+            sigmoid(row.dot(param))
+        }).into_shape((self.results.n_obs, 1)).unwrap();
 
         let pos = &self.y * p.map(|x| x.ln());
         let neg = &self.y.map(|x| 1. - x) * p.map(|x| (1. - x).ln());
@@ -53,16 +144,14 @@ impl CostFunction for Logit {
     }
 }
 
-impl Gradient for Logit {
+impl Gradient for LogitSolver {
     type Param = Array1<f64>;
     type Gradient = Array1<f64>;
 
     fn gradient(&self, param: &Self::Param) -> Result<Self::Gradient, argmin::core::Error> {
         let p = self.x.map_axis(Axis(1), |row| {
-            Self::sigmoid(row.dot(param))
-        }).into_shape((self.n_obs, 1)).unwrap();
-
-        
+            sigmoid(row.dot(param))
+        }).into_shape((self.results.n_obs, 1)).unwrap();
 
         let px = (&p * &self.x).t()
             .map_axis(Axis(1), |row| row.sum());
@@ -74,7 +163,7 @@ impl Gradient for Logit {
     }
 }
 
-impl Operator for Logit {
+impl Operator for LogitSolver {
     type Param = Array1<f64>;
     type Output = Array1<f64>;
 
@@ -85,56 +174,19 @@ impl Operator for Logit {
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
 
     #[test]
-    fn test_argmin() {
-        let y = array![
-            [1.],
-            [1.],
-            [0.],
-            [1.],
-            [1.],
-        ];
+    fn miscellaneous() {
+        let y_unique = vec![1 as i32, 0, 0, 1, 1, 1, 1, 0];
+        let y_unique = y_unique.into_iter().collect::<HashSet<i32>>();
 
-        let x = array![
-            [1., 6.],
-            [1., 3.1],
-            [1., 2.1],
-            [1., 5.1],
-            [1., 1.1],
-        ];
+        let mut y_allowed = HashSet::new();
+        y_allowed.insert(0 as i32);
+        y_allowed.insert(1);
 
-        // let init_param = array![
-        //     [1.],
-        //     [1.],
-        // ];
-
-        let init_param = array![-0.5, 0.5];
-
-        let logit = Logit::new(y, x).unwrap();
-        let cost = logit.cost(&init_param);
-        let gradient = logit.gradient(&init_param);
-
-        println!("{:#?}", cost);
-        println!("{:#?}", gradient);
-
-        let linesearch = MoreThuenteLineSearch::new();
-        let solver = SteepestDescent::new(linesearch);
-
-        let res = Executor::new(logit, solver)
-            .configure(|state| 
-                state
-                    .param(init_param)
-                    .max_iters(100)
-                    // .target_cost(-1000.)
-            )
-            .run()
-            .unwrap();
-
-        println!("{res}");
-
-        
+        assert!(y_unique == y_allowed)
     }
 }
+
+
