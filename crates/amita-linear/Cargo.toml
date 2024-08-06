@@ -4,8 +4,9 @@ version = { workspace = true }
 edition = { workspace = true }
 
 [dependencies]
-amita-error = { workspace = true }
 ndarray = { workspace = true }
 linfa-linalg = { workspace = true }
-polars = { workspace = true }
 statrs = { workspace = true }
+
+amita-error = { path = "../amita-error" }
+amita-traits ={ path = "../amita-traits" }
