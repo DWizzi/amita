@@ -1,29 +1,14 @@
 use amita_error::AmitaError;
+use amita_traits::{Solver, SolverResults};
 use linfa_linalg::qr::QR;
-use ndarray::{Array2, ArrayBase, Dim, Ix1, Ix2, OwnedRepr, ViewRepr};
+use ndarray::{Array1, Array2, Ix1};
 use statrs::distribution::{ContinuousCDF, StudentsT};
-
-pub type ArrayFloat64Dim1 = ArrayBase<OwnedRepr<f64>, Ix1>;
-pub type ArrayFloat64Dim2 = ArrayBase<OwnedRepr<f64>, Ix2>;
 
 #[derive(Debug, Clone)]
 pub enum SEType {
     NonRobust,
     Robust,
 }
-
-pub trait Results {
-    fn coef(&self) -> Result<ArrayFloat64Dim2, AmitaError>;
-
-    fn se(&self) -> Result<ArrayFloat64Dim1, AmitaError>;
-
-    fn t(&self) -> Result<ArrayFloat64Dim1, AmitaError>;
-
-    fn p_vals(&self) -> Result<ArrayFloat64Dim1, AmitaError>;
-
-    fn summary(&self) -> Result<String, AmitaError>;
-}
-
 
 #[derive(Debug, Clone)]
 pub struct OLSResults {
@@ -32,35 +17,36 @@ pub struct OLSResults {
     se_type: SEType,
 
     // estimates
-    coef: Option<ArrayFloat64Dim2>, // beta
-    se: Option<ArrayFloat64Dim1>, // standard error of beta
-    y_pred: Option<ArrayFloat64Dim2>, // predicted y, or fitted y
-    resid: Option<ArrayFloat64Dim2>, // residuals, or the error term
-    t: Option<ArrayFloat64Dim1>, // t statistics
-    p_vals: Option<ArrayFloat64Dim1>, // p values of H_0: \beta = 0
+    coef: Option<Array1<f64>>, // beta
+    se: Option<Array1<f64>>, // standard error of beta
+    y_pred: Option<Array1<f64>>, // predicted y, or fitted y
+    resid: Option<Array1<f64>>, // residuals, or the error term
+    t: Option<Array1<f64>>, // t statistics
+    p_vals: Option<Array1<f64>>, // p values of H_0: \beta = 0
 
     // goodness of fit
     r_sq: Option<f64>,
     r_sq_adj: Option<f64>,
 }
 
-impl Results for OLSResults {
-    fn coef(&self) -> Result<ArrayFloat64Dim2, AmitaError> {
-        let coef = self.coef.clone().ok_or(AmitaError::NotSolved)?;
-        // let coef = coef.into_dimensionality::<Ix1>().unwrap();
+
+impl SolverResults for OLSResults {
+    fn coef(&self) -> Result<Array1<f64>, AmitaError> {
+        let coef = self.coef.clone()
+            .ok_or(AmitaError::NotSolved)?;
         Ok(coef)
         
     }
 
-    fn se(&self) -> Result<ArrayFloat64Dim1, AmitaError> {
+    fn se(&self) -> Result<Array1<f64>, AmitaError> {
         self.se.clone().ok_or(AmitaError::NotSolved)
     }
 
-    fn t(&self) -> Result<ArrayFloat64Dim1, AmitaError> {
+    fn t(&self) -> Result<Array1<f64>, AmitaError> {
         self.t.clone().ok_or(AmitaError::NotSolved)
     }
 
-    fn p_vals(&self) -> Result<ArrayFloat64Dim1, AmitaError> {
+    fn p_vals(&self) -> Result<Array1<f64>, AmitaError> {
         self.p_vals.clone().ok_or(AmitaError::NotSolved)
     }
     
@@ -69,23 +55,14 @@ impl Results for OLSResults {
     }
 }
 
-pub trait Solver<R>
-where
-    Self: Sized,
-    R: Results
-{
-    fn results(&self) -> R;
-
-    fn solve(self) -> Result<Self, AmitaError>;
-}
 
 #[derive(Debug, Clone)]
 pub struct OLSSolver {
-    y: ArrayFloat64Dim2,
-    x: ArrayFloat64Dim2,
+    y: Array1<f64>,
+    x: Array2<f64>,
 
-    q: ArrayFloat64Dim2,
-    r: ArrayFloat64Dim2,
+    q: Array2<f64>,
+    r: Array2<f64>,
 
     results: OLSResults
 }
@@ -100,16 +77,17 @@ impl Solver<OLSResults> for OLSSolver {
         .solve_coef()?
         .solve_se()?
         .solve_r_sq()
+
     }
 }
 
 // initializers
 impl OLSSolver {
     pub fn new(
-        y: ArrayBase<ViewRepr<&f64>, Dim<[usize; 2]>>,
-        x: ArrayBase<ViewRepr<&f64>, Dim<[usize; 2]>>,
+        y: &Array1<f64>,
+        x: &Array2<f64>,
     ) -> Result<Self, AmitaError> {
-        let _res = OLSSolver::validate_data(y, x)?;
+        let _res = OLSSolver::validate_data(&y, &x)?;
 
         let y = y.to_owned();
         let x = x.to_owned();
@@ -151,12 +129,9 @@ impl OLSSolver {
     }
 
     fn validate_data(
-        y: ArrayBase<ViewRepr<&f64>, Dim<[usize; 2]>>,
-        x: ArrayBase<ViewRepr<&f64>, Dim<[usize; 2]>>,
+        y: &Array1<f64>,
+        x: &Array2<f64>,
     ) -> Result<(), AmitaError> {
-        if y.shape()[1] > 1 {
-            return Err(AmitaError::ExpectedVector { matrix_name: "Target `y`".to_string() })
-        }
 
         if x.shape()[0] != y.shape()[0] {
             return Err(AmitaError::NotSameObservations)
@@ -166,7 +141,7 @@ impl OLSSolver {
     }
 }
 
-// Estimate coefficients
+
 impl OLSSolver {
     /// Estimate OLS' coefficients using QR-decomposed X:
     /// \beta = R^{-1} Q^{\transpose} y
@@ -216,7 +191,7 @@ impl OLSSolver {
         let r = self.r.clone();
         let resid = self.results.clone().resid.ok_or(AmitaError::NotSolved)?;
 
-        let sigma = resid.t().dot(&resid)[[0,0]] / (n_obs - n_regressors) as f64;
+        let sigma = resid.t().dot(&resid) / (n_obs - n_regressors) as f64;
         let variance = r.t().dot(&r)
             .qr().map_err(|_| AmitaError::NotQRDecomposable { 
                 matrix_name: "R^{\transpose}R matrix from QR-decomposed X".to_string() 
@@ -238,7 +213,10 @@ impl OLSSolver {
 
         let x = self.x.clone();
         let r = self.r.clone();
-        let resid = self.results.clone().resid.ok_or(AmitaError::NotSolved)?;
+        let resid = self.results.clone().resid
+            .ok_or(AmitaError::NotSolved)?
+            .into_shape((self.results.n_regressors, 1))
+            .unwrap(); //TODO: error handling needed here
 
         // X^{\transpose} X. Utilizing QR decomposition for calculation
         let x_gramian_inverse = r.t().dot(&r)
@@ -302,17 +280,3 @@ impl OLSSolver {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use ndarray::array;
-
-    use super::*;
-
-
-    #[test]
-    fn test_dimension() {
-        let mut arr = array![[1., 2., 3.], [4., 5., 6.,]];
-        let res = arr.view_mut().into_shape((6,)).unwrap().into_dimensionality::<Ix1>();
-        println!("{:#?}", res);
-    }
-}
