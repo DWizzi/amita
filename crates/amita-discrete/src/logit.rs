@@ -132,9 +132,9 @@ impl CostFunction for LogitSolver {
     type Output = f64;
 
     fn cost(&self, param: &Self::Param) -> Result<Self::Output, argmin::core::Error> {
-        let p = self.x.map_axis(Axis(1), |row| {
-            sigmoid(row.dot(param))
-        }).into_shape((self.results.n_obs, 1)).unwrap();
+        let p = self.x.map_axis(Axis(1), 
+            |row| sigmoid(row.dot(param))
+        );
 
         let pos = &self.y * p.map(|x| x.ln());
         let neg = &self.y.map(|x| 1. - x) * p.map(|x| (1. - x).ln());
@@ -178,14 +178,20 @@ mod tests {
 
     #[test]
     fn miscellaneous() {
-        let y_unique = vec![1 as i32, 0, 0, 1, 1, 1, 1, 0];
-        let y_unique = y_unique.into_iter().collect::<HashSet<i32>>();
+        // let y_unique = vec![1 as i32, 0, 0, 1, 1, 1, 1, 0];
+        // let y_unique = y_unique.into_iter().collect::<HashSet<i32>>();
 
-        let mut y_allowed = HashSet::new();
-        y_allowed.insert(0 as i32);
-        y_allowed.insert(1);
+        // let mut y_allowed = HashSet::new();
+        // y_allowed.insert(0 as i32);
+        // y_allowed.insert(1);
 
-        assert!(y_unique == y_allowed)
+        // assert!(y_unique == y_allowed)
+        let x = vec![1.0, 3.0 ,];
+        let y = vec![3.0, 4.0, ];
+        let x = Array1::from_vec(x);
+        let y = Array1::from_vec(y);
+
+        println!("{:#?}", x * y);
     }
 }
 
