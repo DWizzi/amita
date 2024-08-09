@@ -4,10 +4,12 @@ use amita_error::AmitaError;
 use amita_universal::math::sigmoid;
 use amita_universal::traits::Solver;
 use amita_universal::traits::SolverResults;
+use argmin::core::Hessian;
 // use argmin::core::Hessian;
 use argmin::core::State;
 use argmin::solver::quasinewton::LBFGS;
 use ndarray::Axis;
+use ndarray::prelude::*;
 
 use argmin::core::{CostFunction, Error, Executor, Gradient, Operator};
 use argmin::solver::linesearch::MoreThuenteLineSearch;
@@ -194,14 +196,23 @@ impl Gradient for LogitSolver {
     }
 }
 
-// impl Hessian for LogitSolver {
-//     type Param = Array1<f64>;
-//     type Hessian = Array2<f64>;
+impl Hessian for LogitSolver {
+    type Param = Array1<f64>;
+    type Hessian = Array2<f64>;
 
-//     fn hessian(&self, param: &Self::Param) -> Result<Self::Hessian, Error> {
-//         todo!()
-//     }
-// }
+    fn hessian(&self, param: &Self::Param) -> Result<Self::Hessian, Error> {
+        let n_regressors = self.results.n_regressors;
+        let mut hessian_elements = vec![];
+        for i in 0..n_regressors {
+            for j in 0..n_regressors {
+                hessian_elements.push(self.second_order_derivative(param, i, j)?);
+            }
+        }
+        Ok(
+            Array2::from_shape_vec((n_regressors, n_regressors), hessian_elements).unwrap()
+        )
+    }
+}
 
 impl Operator for LogitSolver {
     type Param = Array1<f64>;
@@ -212,9 +223,27 @@ impl Operator for LogitSolver {
     }
 }
 
+impl LogitSolver {
+    /// i: the i-th regressor, or the i-th row of the hessian matrix
+    /// j: the j-th regressor, or the j-th row of the hessian matrix
+    fn second_order_derivative(
+        &self, param: &Array1<f64>, i: usize, j: usize
+    ) -> Result<f64, AmitaError>  {
+        println!("here");
+        let p = self.x.map_axis(Axis(1), 
+            |row| sigmoid(row.dot(param))
+        );
+        let x_i = self.x.slice(s![.., i]).clone();
+        let x_j = self.x.slice(s![.., j]).clone();
+
+        Ok( (&p * p.map(|x| (1. - x)) * x_i * x_j).mean().unwrap() )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use ndarray::array;
+    use ndarray::prelude::*;
 
     use super::*;
 
@@ -224,11 +253,19 @@ mod tests {
             [1.0, 3.0 ,],
             [4.0, 11.0 ,],
         ];
-        let y = array![3.0, 4.0, ];
-        let p = array![0.1, -0.1, ];
+        // let y = array![3.0, 4.0, ];
+        // let p = array![0.1, -0.1, ];
 
-        println!("{:#?}", y.clone() + p);
-        println!("{:#?}", y.clone() * x);
+        // println!("{:#?}", y.clone() + p);
+        // println!("{:#?}", y.clone() * x);
+
+        println!("{:#?}", x.slice(s![.., 1]));
+
+        let k = vec![
+            1., 2., 3., 4.,
+        ];
+        let k = Array2::from_shape_vec((2,2), k);
+        println!("{:#?}", k);
     }
 
     #[test]
@@ -241,8 +278,9 @@ mod tests {
         let y = array![0, 1, 1, 0, 1];
 
         let logit_solver = LogitSolver::new(&y, &x)?;
-        let res = logit_solver.solve_coef();
-        println!("{:#?}", res);
+        let logit_solver = logit_solver.solve_coef()?;
+        println!("{:#?}", logit_solver.results);
+        println!("{:#?}", logit_solver.second_order_derivative(&array![1., 2.], 1, 1));
 
         Ok(())
     }
