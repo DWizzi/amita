@@ -34,7 +34,9 @@ mod tests {
             .unwrap();
 
         let logit = LogitSolver::new(&y, &x)?;
-        logit.solve()?;
+        let logit = logit.solve()?;
+
+        println!("{:#?}", logit);
 
         Ok(())
     }
