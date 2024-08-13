@@ -2,17 +2,12 @@ use std::collections::HashSet;
 
 use amita_error::AmitaError;
 use amita_universal::math::sigmoid;
-use amita_universal::traits::Solver;
-use amita_universal::traits::SolverResults;
-use argmin::core::Hessian;
-// use argmin::core::Hessian;
-use argmin::core::State;
-use argmin::solver::quasinewton::LBFGS;
-use ndarray::Axis;
+use amita_universal::traits::{Solver, SolverResults};
+use linfa_linalg::qr::QR;
 use ndarray::prelude::*;
 
-use argmin::core::{CostFunction, Error, Executor, Gradient, Operator};
-use argmin::solver::linesearch::MoreThuenteLineSearch;
+use argmin::core::{CostFunction, Error, Executor, Gradient, Operator, IterState, Hessian, State};
+use argmin::solver::{linesearch::MoreThuenteLineSearch, quasinewton::LBFGS};
 
 use ndarray::{Array1, Array2};
 
@@ -22,6 +17,8 @@ pub struct LogitResults {
     n_regressors: usize,
 
     coef: Option<Array1<f64>>,
+    se: Option<Array1<f64>>,
+    t: Option<Array1<f64>>,
 }
 
 impl SolverResults for LogitResults {
@@ -50,6 +47,8 @@ impl SolverResults for LogitResults {
 pub struct LogitSolver {
     y: Array1<f64>,
     x: Array2<f64>,
+    hessian: Option<Array2<f64>>,
+    iter_state: Option<IterState<Array1<f64>, Array1<f64>, (), (), (), f64, >>,
 
     max_iter: u64,
     max_tolerance: f64,
@@ -72,6 +71,8 @@ impl LogitSolver {
             n_regressors,
 
             coef: None,
+            se: None,
+            t: None,
         };
 
         let y = y.clone().map(|x| *x as f64);
@@ -79,6 +80,8 @@ impl LogitSolver {
         Ok( Self {
             y: y,
             x: x.clone(),
+            hessian: None,
+            iter_state: None,
 
             max_iter: 1_000,
             max_tolerance: 0.0001,
@@ -127,12 +130,17 @@ impl Solver<LogitResults> for LogitSolver {
     }
 
     fn solve(self) -> Result<Self, AmitaError> {
-        self.solve_coef()
+        self
+        .run_solver()?
+        .solve_coef()?
+        .solve_hessian()?
+        .solve_se()?
+        .solve_t()
     }
 }
 
 impl LogitSolver {
-    fn solve_coef(mut self) -> Result<Self, AmitaError> {
+    fn run_solver(mut self) ->Result<Self, AmitaError> {
         let init_param = Array1::zeros((self.results.n_regressors, ));
 
         let linesearch = MoreThuenteLineSearch::new();
@@ -150,11 +158,56 @@ impl LogitSolver {
             .run()
             .unwrap();
 
-        let coef = res.state()
-            .get_param()
-            .unwrap(); // error handling needed here
+        self.iter_state = Some(res.state.clone());
 
-        self.results.coef = Some( coef.clone() );
+        Ok(self)   
+    }
+
+    fn solve_coef(mut self) -> Result<Self, AmitaError> {
+        let iter_state = self.iter_state.clone().ok_or(AmitaError::NotSolved)?;
+        self.results.coef = iter_state.get_param().map(|x| x.clone());
+
+        Ok(self)
+    }
+
+    fn solve_hessian(mut self) -> Result<Self, AmitaError> {
+        let coef = self.results.coef.clone().ok_or(AmitaError::NotSolved)?;
+        let n_regressors = self.results.n_regressors;
+        let mut hessian_elements = vec![];
+        for i in 0..n_regressors {
+            for j in 0..n_regressors {
+                hessian_elements.push(self.second_order_derivative(&coef, i, j)?);
+            }
+        }
+
+        let hessian = Array2::from_shape_vec((n_regressors, n_regressors), hessian_elements).unwrap();
+        self.hessian = Some(hessian);
+        Ok( self )
+    }
+
+    fn solve_se(self) -> Result<Self, AmitaError> {
+        self.solve_non_robust_se()
+    }
+
+    fn solve_t(mut self) -> Result<Self, AmitaError> {
+        let mut coef = self.results.coef.clone().ok_or(AmitaError::NotSolved)?;
+        let se = self.results.se.clone().ok_or(AmitaError::NotSolved)?;
+
+        coef.zip_mut_with(&se, |beta, se| *beta = *beta / *se);
+
+        self.results.t = Some(coef);
+        Ok( self )
+    }
+
+    fn solve_non_robust_se(mut self) -> Result<Self, AmitaError> {
+        let n_obs = self.results.n_obs as f64;
+        let hessian = self.hessian.clone().ok_or(AmitaError::NotSolved)?;
+
+        let information_matrix = hessian;
+        let var_cov = information_matrix.qr().unwrap().inverse().unwrap();
+
+        let se = var_cov.diag().map(|x| x.sqrt() / n_obs.sqrt());
+        self.results.se = Some(se);
 
         Ok(self)
     }
@@ -229,7 +282,6 @@ impl LogitSolver {
     fn second_order_derivative(
         &self, param: &Array1<f64>, i: usize, j: usize
     ) -> Result<f64, AmitaError>  {
-        println!("here");
         let p = self.x.map_axis(Axis(1), 
             |row| sigmoid(row.dot(param))
         );
@@ -253,11 +305,6 @@ mod tests {
             [1.0, 3.0 ,],
             [4.0, 11.0 ,],
         ];
-        // let y = array![3.0, 4.0, ];
-        // let p = array![0.1, -0.1, ];
-
-        // println!("{:#?}", y.clone() + p);
-        // println!("{:#?}", y.clone() * x);
 
         println!("{:#?}", x.slice(s![.., 1]));
 
@@ -281,6 +328,28 @@ mod tests {
         let logit_solver = logit_solver.solve_coef()?;
         println!("{:#?}", logit_solver.results);
         println!("{:#?}", logit_solver.second_order_derivative(&array![1., 2.], 1, 1));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_hessian() -> Result<(), AmitaError> {
+        let x = array![
+            [1., 1., 1., 1., 1.,],
+            [3.1, 13.2, -23.5, -4.4, 9.4],
+        ].t().to_owned();
+
+        let y = array![0, 1, 1, 0, 1];
+
+        let logit_solver = LogitSolver::new(&y, &x).unwrap();
+        let logit_solver = logit_solver.solve().unwrap();
+        println!("{:#?}", logit_solver);
+
+        let _coef = logit_solver.results.coef;
+        let _hessian = logit_solver.hessian;
+
+        // println!("{:#?}", coef);
+        // println!("{:#?}", hessian);
 
         Ok(())
     }
