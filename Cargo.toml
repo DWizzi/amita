@@ -1,7 +1,8 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/*",
+    "crates/*", 
+    "py-amita",
 ]
 
 [workspace.package]
@@ -18,11 +19,12 @@ thiserror = "1.0.63"
 statrs = "0.17.1"
 argmin = { version = "0.10.0" }
 argmin-math = { version = "0.4.0", features = ["ndarray_latest-nolinalg"] }
+numpy = "0.21"
+pyo3 = { version = "0.21", features = ["extension-module"] }
 
-
+amita = { path = "crates/amita" }
 amita-error = { path = "crates/amita-error"}
-amita-universal ={ path = "crates/amita-universal" }
+amita-utils ={ path = "crates/amita-utils" }
 
-amita-discrete = { path = "crates/amita-discrete"}
-amita-linear = { path = "crates/amita-linear"}
+amita-base = { path = "crates/amita-base"}
 
