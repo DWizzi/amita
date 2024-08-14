@@ -27,4 +27,4 @@ amita-error = { path = "crates/amita-error"}
 amita-utils ={ path = "crates/amita-utils" }
 
 amita-base = { path = "crates/amita-base"}
-
+amita-models = { path = "crates/amita-models"}
