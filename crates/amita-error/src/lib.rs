@@ -16,6 +16,8 @@ pub enum AmitaError {
     NotSolved,
 
     // Model
-    // #[error("Model is not fitted")]
-    // NotFittedModel,
+    #[error("Model is not fitted")]
+    NotFittedModel,
+    #[error("Column {column:?} not found")]
+    ColumnNotFound { column: String },
 }
