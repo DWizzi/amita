@@ -6,5 +6,6 @@ edition.workspace = true
 [dependencies]
 polars = { workspace = true }
 amita-base = { workspace = true }
+amita-models = { workspace = true }
 amita-error = { workspace = true }
 amita-utils = { workspace = true }

@@ -22,3 +22,11 @@ pub fn wine_quality() -> DataFrame {
         .collect()
         .unwrap()
 }
+
+pub fn banks() -> DataFrame {
+    LazyCsvReader::new("banks.csv")
+        .finish()
+        .unwrap()
+        .collect()
+        .unwrap()
+}
