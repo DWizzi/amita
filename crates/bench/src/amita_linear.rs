@@ -3,7 +3,7 @@
 mod tests {
     use amita_error::AmitaError;
     use amita_linear::ols::OLSSolver;
-    use amita_universal::traits::{Solver, SolverResults};
+    use amita_utils::traits::{Solver, SolverResults};
     use polars::prelude::*;
 
     use crate::datasets;

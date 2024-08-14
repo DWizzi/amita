@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use amita_error::AmitaError;
-    use amita_universal::traits::Solver;
+    use amita_utils::traits::Solver;
     use amita_discrete::logit::LogitSolver;
     use polars::prelude::*;
 

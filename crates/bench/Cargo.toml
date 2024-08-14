@@ -5,7 +5,6 @@ edition.workspace = true
 
 [dependencies]
 polars = { workspace = true }
-amita-discrete = { workspace = true }
+amita-base = { workspace = true }
 amita-error = { workspace = true }
-amita-linear = { workspace = true }
-amita-universal = { workspace = true }
+amita-utils = { workspace = true }
