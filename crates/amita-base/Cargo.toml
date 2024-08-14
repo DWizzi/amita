@@ -1,5 +1,5 @@
 [package]
-name = "amita-discrete"
+name = "amita-base"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -13,4 +13,4 @@ argmin = { workspace = true }
 argmin-math = { workspace = true }
 
 amita-error = { workspace = true }
-amita-universal ={ workspace = true }
+amita-utils ={ workspace = true }

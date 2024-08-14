@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
 use amita_error::AmitaError;
-use amita_universal::math::sigmoid;
-use amita_universal::traits::{Solver, SolverResults};
+use amita_utils::math::sigmoid;
+use amita_utils::traits::{Solver, SolverResults};
 use linfa_linalg::qr::QR;
 use ndarray::prelude::*;
 
