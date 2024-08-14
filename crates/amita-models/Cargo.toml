@@ -1,0 +1,9 @@
+[package]
+name = "amita-models"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description.workspace = true
+
+[dependencies]
+polars = { workspace = true }
