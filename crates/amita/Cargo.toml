@@ -6,8 +6,6 @@ authors.workspace = true
 description.workspace = true
 
 [dependencies]
-numpy = { workspace = true }
-pyo3 = { workspace = true }
 
 amita-base = { workspace = true }
 amita-error = { workspace = true }
