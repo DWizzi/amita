@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use amita_error::AmitaError;
 use amita_utils::math::sigmoid;
-use amita_utils::traits::{Solver, SolverResults};
+use amita_utils::traits::{BaseSolver, BaseResults};
 use linfa_linalg::qr::QR;
 use ndarray::prelude::*;
 
@@ -21,7 +21,7 @@ pub struct LogitResults {
     t: Option<Array1<f64>>,
 }
 
-impl SolverResults for LogitResults {
+impl BaseResults for LogitResults {
     fn coef(&self) -> Result<Array1<f64>, AmitaError> {
         self.coef.clone().ok_or(AmitaError::NotSolved)
     }
@@ -124,7 +124,7 @@ impl LogitSolver {
     }
 }
 
-impl Solver<LogitResults> for LogitSolver {
+impl BaseSolver<LogitResults> for LogitSolver {
     fn results(&self) -> LogitResults {
         todo!()
     }

@@ -1,6 +1,6 @@
 use amita_base::linear::ols::{OLSResults, OLSSolver};
 use amita_error::AmitaError;
-use amita_utils::traits::Solver;
+use amita_utils::traits::BaseSolver;
 use polars::prelude::*;
 
 #[derive(Debug, Clone)]

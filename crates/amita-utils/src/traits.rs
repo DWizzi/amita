@@ -2,7 +2,7 @@ use ndarray::Array1;
 
 use amita_error::AmitaError;
 
-pub trait SolverResults {
+pub trait BaseResults {
     fn coef(&self) -> Result<Array1<f64>, AmitaError>;
 
     fn se(&self) -> Result<Array1<f64>, AmitaError>;
@@ -14,10 +14,10 @@ pub trait SolverResults {
     fn summary(&self) -> Result<String, AmitaError>;
 }
 
-pub trait Solver<R> 
+pub trait BaseSolver<R> 
 where
     Self: Sized,
-    R: SolverResults,
+    R: BaseResults,
 {
     fn results(&self) -> R;
 

@@ -1,5 +1,5 @@
 use amita_error::AmitaError;
-use amita_utils::traits::{Solver, SolverResults};
+use amita_utils::traits::{BaseSolver, BaseResults};
 use linfa_linalg::qr::QR;
 use ndarray::{Array1, Array2, Ix1};
 use statrs::distribution::{ContinuousCDF, StudentsT};
@@ -30,7 +30,7 @@ pub struct OLSResults {
 }
 
 
-impl SolverResults for OLSResults {
+impl BaseResults for OLSResults {
     fn coef(&self) -> Result<Array1<f64>, AmitaError> {
         let coef = self.coef.clone()
             .ok_or(AmitaError::NotSolved)?;
@@ -67,7 +67,7 @@ pub struct OLSSolver {
     results: OLSResults
 }
 
-impl Solver<OLSResults> for OLSSolver {
+impl BaseSolver<OLSResults> for OLSSolver {
     fn results(&self) -> OLSResults {
         self.results.clone()
     }
