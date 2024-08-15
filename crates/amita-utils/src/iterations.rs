@@ -1,4 +1,6 @@
-pub enum Termination {
+
+
+pub enum TerminationCondition {
     MaxIterReached,
     SolverConverged,
 }
