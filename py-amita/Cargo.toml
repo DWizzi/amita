@@ -5,5 +5,18 @@ edition.workspace = true
 authors.workspace = true
 description.workspace = true
 
+[lib]
+name = "py_amita"
+crate-type = ["cdylib"]
+
 [dependencies]
-pyo3 = { workspace = true }
+# pyo3 = { version = "0.16", features = ["extension-module"] }
+# pyo3-polars = "0.16.0"
+
+polars = { workspace = true }
+
+amita-models = { workspace = true }
+amita-base = { workspace = true }
+amita-error = { workspace = true }
+amita-utils ={ workspace = true }
+
