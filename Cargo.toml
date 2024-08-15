@@ -1,7 +1,8 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/*", 
+    "base/*", 
+    "models/*",
     "py-amita",
 ]
 
@@ -20,9 +21,8 @@ statrs = "0.17.1"
 argmin = { version = "0.10.0" }
 argmin-math = { version = "0.4.0", features = ["ndarray_latest-nolinalg"] }
 
-amita = { path = "crates/amita" }
-amita-error = { path = "crates/amita-error"}
-amita-utils ={ path = "crates/amita-utils" }
+amita = { path = "base/amita" }
+amita-error = { path = "base/amita-error"}
+amita-utils ={ path = "base/amita-utils" }
 
-amita-base = { path = "crates/amita-base"}
-amita-models = { path = "crates/amita-models"}
+amita-base = { path = "base/amita-base"}
