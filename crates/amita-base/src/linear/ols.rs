@@ -153,7 +153,7 @@ impl OLSSolver {
             .qr().map_err(|_| AmitaError::NotQRDecomposable { 
                 matrix_name: "R matrix from QR-decomposed X".to_string() 
             })?
-            .inverse().map_err(|_| AmitaError::NotInversable {
+            .inverse().map_err(|_| AmitaError::NotInvertible {
                 matrix_name: "R matrix from QR-decomposed X".to_string() 
             })?;
         let q = self.q.clone();
@@ -196,7 +196,7 @@ impl OLSSolver {
             .qr().map_err(|_| AmitaError::NotQRDecomposable { 
                 matrix_name: "R^{\transpose}R matrix from QR-decomposed X".to_string() 
             })?
-            .inverse().map_err(|_| AmitaError::NotInversable {
+            .inverse().map_err(|_| AmitaError::NotInvertible {
                 matrix_name: "R^{\transpose}R matrix from QR-decomposed X".to_string() 
             })?;
         let se = variance.map(|x| (x * sigma).sqrt()).diag().to_owned();
@@ -223,7 +223,7 @@ impl OLSSolver {
             .qr().map_err(|_| AmitaError::NotQRDecomposable { 
                 matrix_name: "R^{\transpose}R matrix from QR-decomposed X".to_string() 
             })?
-            .inverse().map_err(|_| AmitaError::NotInversable {
+            .inverse().map_err(|_| AmitaError::NotInvertible {
                 matrix_name: "R^{\transpose}R matrix from QR-decomposed X".to_string() 
             })?;
         println!("{:#?}", x_gramian_inverse.shape());

@@ -6,8 +6,8 @@ pub enum AmitaError {
     NotSameObservations,
     #[error("{matrix_name:?} is not QR-decomposable")]
     NotQRDecomposable { matrix_name: String },
-    #[error("{matrix_name:?} is not inversable")]
-    NotInversable { matrix_name: String },
+    #[error("{matrix_name:?} is not invertible")]
+    NotInvertible { matrix_name: String },
     #[error("Elements in {matrix_name:?} are non-binary")]
     NonBinary { matrix_name: String },
 
