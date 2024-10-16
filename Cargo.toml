@@ -1,0 +1,19 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/*"
+]
+default-members = [
+  "crates/*",
+]
+
+[workspace.package]
+version = "0.1.0"
+authors = ["David Li <davidwzlee@outlook.com>"]
+edition = "2021"
+license = "MIT"
+
+[workspace.dependencies]
+ndarray = "0.16.0"
+thiserror = "1.0.64"
+linfa-linalg = "0.2.0"
