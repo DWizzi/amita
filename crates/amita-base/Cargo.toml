@@ -1,0 +1,12 @@
+[package]
+name = "amita-base"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+thiserror = { workspace = true }
+ndarray = { workspace = true }
+linfa-linalg ={ workspace = true }
+
