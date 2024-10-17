@@ -84,9 +84,10 @@ impl OLS {
     }
 
     fn standard_errors(mut self) -> Self {
-        let standard_errors = match self.standard_error_type {
+        let standard_errors = match &self.standard_error_type {
             StandardErrorType::Robust => self.nonrobust_standard_errors(),
-            _ => todo!()
+            StandardErrorType::NonRobust => self.robust_standard_errors(),
+            StandardErrorType::Clustered { by } => self.clustered_standard_errors(by.view()),
         };
 
         self.standard_errors = Some(standard_errors);
@@ -107,6 +108,14 @@ impl OLS {
             .map(|x| x.sqrt() / self.y.len() as f64);
         println!("{:#?}", se);
         se
+    }
+
+    fn robust_standard_errors(&self) -> Array1<f64> {
+        todo!()
+    }
+
+    fn clustered_standard_errors(&self, by: ArrayView1<f64>) -> Array1<f64> {
+        todo!()
     }
 }
 
