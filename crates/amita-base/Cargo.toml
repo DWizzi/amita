@@ -9,4 +9,5 @@ license.workspace = true
 thiserror = { workspace = true }
 ndarray = { workspace = true }
 linfa-linalg ={ workspace = true }
-
+rayon = { workspace = true }
+argmin = { workspace = true }
