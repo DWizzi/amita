@@ -22,6 +22,8 @@ pub struct OLS {
     // process outcomes
     n_obs: u64,
     n_regressors: u64,
+    q: Option<Array2<f64>>, // Q matrix in QR decomposition
+    r: Option<Array2<f64>>, // R matrix in QR decomposition
     xtx: Option<Array2<f64>>,
     xtx_inv: Option<Array2<f64>>,
     xty: Option<Array1<f64>>,
@@ -60,6 +62,8 @@ impl OLS {
 
             n_obs: y.len() as u64,
             n_regressors: x.ncols() as u64,
+            q: None,
+            r: None,
             xtx: None,
             xtx_inv: None,
             xty: None,
@@ -83,15 +87,31 @@ impl OLS {
 impl OLS {
     fn calculate_process_outcomes(self) -> Self {
         self
+        .calculate_qr()
         .calculate_xtx()
         .calculate_xtx_inv()
         .calculate_xty()
         .calculate_hat_mat()
     }
 
+    fn calculate_qr(mut self) -> Self {
+        let qr = self.x.clone()
+            .qr_into()
+            .expect("Not QR-Decomposable matrix X");
+        let q = qr.generate_q();
+        let r = qr.into_r();
+
+        self.q = Some(q);
+        self.r = Some(r);
+
+        self
+    }
+
     fn calculate_xtx(mut self) -> Self {
-        let xtx = self.x.t().dot(&self.x);
+        let r = self.r.clone().expect("Should calculate QR decomposition first");
+        let xtx = r.t().dot(&r);
         self.xtx = Some(xtx);
+        
         self
     }
 
