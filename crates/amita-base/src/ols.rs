@@ -1,4 +1,6 @@
-use ndarray::{Array, Array1, Array2, ArrayView1, ArrayView2, Ix1};
+use std::collections::HashSet;
+
+use ndarray::{Array, Array1, Array2, ArrayView1, ArrayView2, Axis, Ix1};
 use linfa_linalg::qr::QRInto;
 
 #[derive(Debug, Clone)]
@@ -8,7 +10,7 @@ pub enum StandardErrorType {
     HC1,
     HC2,
     HC3,
-    Clustered { by: Array1<f64> },
+    Clustered { by: Array1<i32> },
 }
 
 #[derive(Debug, Clone)]
@@ -215,14 +217,56 @@ impl OLS {
         se
     }
 
-    fn calculate_clustered_standard_errors(&self, _by: ArrayView1<f64>) -> Array1<f64> {
-        todo!()
+    /// Calculates the clustered standard error
+    /// 
+    /// Argument `by` should be of same length and same order as `self.y`
+    fn calculate_clustered_standard_errors(&self, by: ArrayView1<i32>) -> Array1<f64> {
+        // TODO: check if computations are correct
+        if by.len() != self.n_obs as usize {
+            panic!("Cluster variable must be of same length as number of observations");
+        }
+
+        let unique_clusters = by
+            .iter()
+            .cloned()
+            .collect::<HashSet<i32>>()
+            .into_iter()
+            .collect::<Array1<i32>>();
+
+        let mut sandwich = Array2::<f64>::zeros((self.n_regressors as usize, self.n_regressors as usize));
+
+        for cluster in &unique_clusters {
+            let cluster_idx = by
+                .iter()
+                .enumerate()
+                .filter_map(|(i, val)| {
+                    if val == cluster  { Some(i) } else { None }
+                })
+                .collect::<Vec<usize>>();
+            let x_cluster = self.x.clone()
+                .select(Axis(0), &cluster_idx);
+            let resid_cluster = self.resid.clone().expect("Unfitted")
+                .select(Axis(0), &cluster_idx)
+                .insert_axis(Axis(1));
+            let cluster_sandwich = x_cluster.t()
+                .dot(&resid_cluster)
+                .dot(&resid_cluster.t())
+                .dot(&x_cluster);
+            sandwich =  sandwich + cluster_sandwich;
+        }
+
+        let xtx_inv = self.xtx_inv.clone().expect("X'X");
+        let covariance_mat = xtx_inv
+            .dot(&sandwich)
+            .dot(&xtx_inv);
+
+        covariance_mat.diag().mapv(f64::sqrt)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use ndarray::{array, Array};
+    use ndarray::{array, Array, Axis};
 
     use super::*;
 
@@ -288,5 +332,16 @@ mod tests {
         });
 
         println!("{:#?}", diag_matrix);
+    }
+
+    #[test]
+    fn get_index() {
+        let arr = array![1., 3., 3., 4.];
+        let pos = arr.indexed_iter()
+            .filter_map(|(i, &val)| if val == 3.  { Some(i) } else { None })
+            .collect::<Vec<usize>>();
+        println!("{:#?}", pos);
+
+        println!("{:#?}", arr.select(Axis(0), &pos));
     }
 }
