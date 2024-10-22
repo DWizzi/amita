@@ -6,7 +6,8 @@ use linfa_linalg::qr::QRInto;
 #[derive(Debug, Clone)]
 pub enum StandardErrorType {
     NonRobust,
-    Robust, // equivalent to HC3
+    Robust, // alias to HC3
+    HC0,
     HC1,
     HC2,
     HC3,
@@ -111,7 +112,7 @@ impl OLS {
         let r = self.r.clone().expect("Should calculate QR decomposition first");
         let xtx = r.t().dot(&r);
         self.xtx = Some(xtx);
-        
+
         self
     }
 
@@ -178,6 +179,9 @@ impl OLS {
             StandardErrorType::Robust => 
                 self.calculate_robust_standard_errors(StandardErrorType::HC3),
 
+            StandardErrorType::HC0 =>
+                self.calculate_robust_standard_errors(StandardErrorType::HC0),
+
             StandardErrorType::HC1 => 
                 self.calculate_robust_standard_errors(StandardErrorType::HC1),
 
@@ -217,7 +221,8 @@ impl OLS {
         let sandwich = Array::from_shape_fn((resid.len(), resid.len()), |(i, j)| {
             match i==j {
                 true => match standard_error_type {
-                    StandardErrorType::HC1 => resid[i].powi(2),
+                    StandardErrorType::HC0 => resid[i].powi(2),
+                    StandardErrorType::HC1 => resid[i].powi(2) * self.n_obs as f64 / (self.n_obs - self.n_regressors) as f64,
                     StandardErrorType::HC2 => resid[i].powi(2) / hat_diag[i],
                     StandardErrorType::HC3 => resid[i].powi(2) / hat_diag[i].powi(2),
                     _ => panic!("error"),
@@ -226,13 +231,11 @@ impl OLS {
             }
         });
 
-        let cov_mat = xtx_inv
-            .dot(&self.x.t())
-            .dot(&sandwich)
-            .dot(&self.x)
-            .dot(&xtx_inv);
+        let lhs = xtx_inv.dot(&self.x.t());
+        let rhs = self.x.dot(&xtx_inv);
+        let cov_mat = lhs.dot(&sandwich).dot(&rhs);
 
-        let se = cov_mat.diag().map(|x| x.sqrt());
+        let se = cov_mat.diag().mapv(f64::sqrt);
         
         se
     }
@@ -332,7 +335,7 @@ mod tests {
             [1.16282132, 1.53101396]];
 
         let ols = OLS::new(y.view(), x.view())
-            .with_se_type(StandardErrorType::HC1)
+            .with_se_type(StandardErrorType::HC3)
             .fit();
 
         let coef = ols.coefficients;
